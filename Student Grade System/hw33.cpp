@@ -15,13 +15,20 @@ public:
     struct Student {
         string name;
         int score;
+        Student(string name, int score):name(name),score(score){}
     };
 
-    vector<Student> students;
+    vector<Student*> students;
 private:
     std::unordered_map<std::string, Student*> studentIndex;// TODO5新增
 
 public:
+    // 析构函数：释放动态分配的内存
+    ~StudentManager() {
+        for (Student* student : students) {
+            delete student;
+        }
+    }
     // TODO 题目1：正确性
     // 解决：封装一个内部不变式：系统中学生的成绩必须始终处于 [0, 100] 之间，且不允许添加重名学生。
     bool isValidScore(int score) const {
@@ -39,13 +46,12 @@ public:
         if (!isValidScore(score)) {
             return false; // 分数无效
         }
-        students.push_back({ name, score });
-        studentIndex[name] = &students.back();
+        Student* newStudent=new Student{ name, score };
+        students.push_back(newStudent);
+        studentIndex[name] = newStudent;
 
         // 验证 studentIndex 是否正确更新
         cout << "Checking studentIndex after adding Alice and Bob:" << endl;
-        // for(auto &i:students)
-        //     cout<<i.name<<": "<<i.score<<"\n";
         for (const auto& pair : studentIndex) {
             cout << pair.first << ": " << pair.second->score << endl;
         }
@@ -72,8 +78,9 @@ public:
         if (!isValidScore(score)) {
             throw out_of_range("Invalid score: " + std::to_string(score));
         }
-        students.push_back({ name, score }); // 无校验
-        studentIndex[name] = &students.back();
+        Student* newStudent=new Student{ name, score };
+        students.push_back(newStudent); // 无校验
+        studentIndex[name] = newStudent;
     }
 
     // TODO 题目3：灵活性
@@ -87,31 +94,24 @@ public:
     // TODO 题目4：可重用性
     // 解决：修改countHighScorers，调用countIf将过滤逻辑提取为通用函数
     int countHighScorers() {
-        // int count = 0;
-        // for (const auto& s : students) {
-        //     if (s.score >= 90) {
-        //         ++count;
-        //     }
-        // }
-        // return count;
-         return countIf([](const Student& s) {
-            return s.score >= 90;
+        return countIf([](const Student* s) {
+            return s->score >= 90;
         });
     }
 
     // 通用计数工具
-    int countIf(std::function<bool(const Student&)> predicate) const {
-        // TODO
-        return std::count_if(students.begin(), students.end(), predicate);
+    int countIf(function<bool(const Student*)> predicate) const {
+        int count=0;
+        for(const auto& i:students){
+            if(predicate(i)) count++;
+        }
+        return count;
     }
 
 
     // TODO 题目5：高效性
     // 解决：优化查找性能
     const Student* findStudent(const string& name) {
-        // for (const auto& s : students) {
-        //     if (s.name == name) return &s; // 查找性能：O(n)
-        // }
         if (studentIndex.find(name) != studentIndex.end()) {
             return studentIndex[name];
         }
@@ -143,11 +143,11 @@ int main() {
         // 测试题目3
         cout << "Alice's grade: " << mgr.getGrade(85) << endl;
         // 预计完成题目3后可以通过以下测试↓
-        // cout << "Bob's grade (strict): " << mgr.getGrade(92, 95, 85) << endl;
+        cout << "Bob's grade (strict): " << mgr.getGrade(92, 95, 85) << endl;
 
         // 测试题目4
-        int highScorers = mgr.countIf([](const StudentManager::Student& s) {
-            return s.score >= 90;
+        int highScorers = mgr.countIf([](const StudentManager::Student* s) {
+            return s->score >= 90;
             });
         std::cout << "High scorers: " << highScorers << std::endl;
 
